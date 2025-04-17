@@ -1,8 +1,9 @@
 ﻿#include <iostream>
 #include <vector>
-#include <Windows.h>
+#include <windows.h>
 #include <conio.h>
 #include <string>
+#include <cstdlib>
 
 #include "Cell.h"
 
@@ -14,8 +15,13 @@ bool shouldRun = true;
 int generation = 0;
 int population = 0;
 
+int height = 320;
+int width  = 320;
+
+int fontSize = 1;
 
 void genStep(vector<vector<Cell>>& Plane) {
+
 	population = 0;
 	generation++;
 	// First, count neighbors for all cells
@@ -50,31 +56,65 @@ void genStep(vector<vector<Cell>>& Plane) {
 	}
 }
 
-//void Wypisz(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
-//	
-//
-//	string result="";
-//	for (int y = 0; y < Plane.size(); y++) {
-//		for (int x = 0; x < Plane[y].size(); x++) {
-//
-//			if (Plane[y][x].isAlive) {
-//				SetConsoleTextAttribute(hConsole, 10);
-//				printf("■"); 
-//			}
-//			else {
-//				SetConsoleTextAttribute(hConsole, 8);
-//				printf("□");
-//			}
-//
-//			cout << " ";
-//			//Plane[y][x].isAlive ? result+="■" : result+="□";
-//			//result += " ";
-//		}
-//		//result += "\n";
-//		printf("\n");
-//	}
-//	cout << result;
-//}
+void genSmothStep(vector<vector<Cell>>& Plane) {
+
+	population = 0;
+	generation++;
+	// First, count neighbors for all cells
+	for (int i = 0; i < Plane.size(); i++) {
+		for (int j = 0; j < Plane[i].size(); j++) {
+			Plane[i][j].countNeigh(i, j, Plane, 5);
+		}
+	}
+
+	// Then apply the rules to all cells
+	for (int i = 0; i < Plane.size(); i++) {
+		for (int j = 0; j < Plane[i].size(); j++) {
+			// Apply Larger Game of Life rules
+			if (Plane[i][j].isAlive) {
+
+				population++;
+
+				if ((Plane[i][j].neigh >= 0 && Plane[i][j].neigh <= 25) || (Plane[i][j].neigh >= 58 && Plane[i][j].neigh <= 121)) {
+					Plane[i][j].isAlive = false;
+					population--;
+				}
+			}
+			else {
+				if (Plane[i][j].neigh >= 34 && Plane[i][j].neigh <= 45) {
+					Plane[i][j].isAlive = true;
+					population++;
+				}
+			}
+		}
+	}
+}
+
+void Wypisz1(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
+	
+
+	string result="";
+	for (int y = 0; y < Plane.size(); y++) {
+		for (int x = 0; x < Plane[y].size(); x++) {
+
+			if (Plane[y][x].isAlive) {
+				SetConsoleTextAttribute(hConsole, 10);
+				printf("■"); 
+			}
+			else {
+				SetConsoleTextAttribute(hConsole, 8);
+				printf("□");
+			}
+
+			cout << " ";
+			//Plane[y][x].isAlive ? result+="■" : result+="□";
+			//result += " ";
+		}
+		//result += "\n";
+		printf("\n");
+	}
+	cout << result;
+}
 
 void Wypisz(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	if (Plane.empty() || Plane[0].empty()) return;
@@ -145,8 +185,8 @@ void Wypisz(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	CONSOLE_FONT_INFOEX fontInfo = { 0 };
 	fontInfo.cbSize = sizeof(fontInfo);
 	fontInfo.nFont = 0;
-	fontInfo.dwFontSize.X = 5;  // Font width
-	fontInfo.dwFontSize.Y = 10;  // Font height
+	fontInfo.dwFontSize.X = fontSize;  // Font width
+	fontInfo.dwFontSize.Y = 2*fontSize;  // Font height
 	fontInfo.FontFamily = FF_DONTCARE;
 	fontInfo.FontWeight = FW_NORMAL;
 
@@ -167,88 +207,34 @@ void Wypisz(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	WriteConsoleOutputW(hConsole, buffer.data(), bufferSize, bufferCoord, &writeArea);
 }
 
-// Function to initialize a Gosper Glider Gun
-void initGosperGliderGun(vector<vector<Cell>>& Plane) {
-
-	// Left block
-	Plane[5][1].isAlive = true;
-	Plane[5][2].isAlive = true;
-	Plane[6][1].isAlive = true;
-	Plane[6][2].isAlive = true;
-
-	// Left ship
-	Plane[3][13].isAlive = true;
-	Plane[3][14].isAlive = true;
-	Plane[4][12].isAlive = true;
-	Plane[4][16].isAlive = true;
-	Plane[5][11].isAlive = true;
-	Plane[5][17].isAlive = true;
-	Plane[6][11].isAlive = true;
-	Plane[6][15].isAlive = true;
-	Plane[6][17].isAlive = true;
-	Plane[6][18].isAlive = true;
-	Plane[7][11].isAlive = true;
-	Plane[7][17].isAlive = true;
-	Plane[8][12].isAlive = true;
-	Plane[8][16].isAlive = true;
-	Plane[9][13].isAlive = true;
-	Plane[9][14].isAlive = true;
-
-	// Right ship
-	Plane[1][25].isAlive = true;
-	Plane[2][23].isAlive = true;
-	Plane[2][25].isAlive = true;
-	Plane[3][21].isAlive = true;
-	Plane[3][22].isAlive = true;
-	Plane[4][21].isAlive = true;
-	Plane[4][22].isAlive = true;
-	Plane[5][21].isAlive = true;
-	Plane[5][22].isAlive = true;
-	Plane[6][23].isAlive = true;
-	Plane[6][25].isAlive = true;
-	Plane[7][25].isAlive = true;
-
-	// Right block
-	Plane[3][35].isAlive = true;
-	Plane[3][36].isAlive = true;
-	Plane[4][35].isAlive = true;
-	Plane[4][36].isAlive = true;
-}
-
-void initGlider(int x, int y, vector<vector<Cell>>& Plane) {
-
-	Plane[y][x + 1].isAlive = true;
-	Plane[y + 1][x + 2].isAlive = true;
-	Plane[y + 2][x].isAlive = true;
-	Plane[y + 2][x + 1].isAlive = true;
-	Plane[y + 2][x + 2].isAlive = true;
-}
 
 int main() {
 
-	vector<vector<Cell>> Plane(60, vector<Cell>(60));
+	vector<vector<Cell>> Plane(height, vector<Cell>(width));
 
 	initGosperGliderGun(Plane);
-	srand(time(NULL));
 
-	
+	srand(time(NULL));
 	
 	while (true) {
 	
-		if (shouldRun) { 		
-			genStep(Plane);
-			initGlider(rand() % 50, rand() % 50, Plane);
-		};
-		
+		if (shouldRun) { 
+			genSmothStep(Plane);	
+			
+		};	
+
 		if (_kbhit()) {
 			char key = _getch();  
-			if (key == 'a' || key == 'A') {
+			if (key == 'a') {
 				shouldRun = !shouldRun;
 			}
-		}
-		
+			if (key == 'g') {
+				initSmothGlider(rand() % height, rand() % width, Plane,0);
+			}
+		}	
+
 		Wypisz(Plane,hConsole);
-		Sleep(50);
+
 	}
 
 	return 0;
