@@ -10,6 +10,7 @@ public:
 	int poxY;
 
 	bool isAlive = 0;
+	bool isDying = 0;
 
 	int neigh = 0;
 

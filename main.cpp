@@ -16,11 +16,11 @@ bool shouldRun = true;
 int generation = 0;
 int population = 0;
 
-int height = 320;
-int width  = 320;
+int height = 300;
+int width  = 300;
 int type   = 1;
 
-int fontSize = 1;
+unsigned int fontSize = 1;
 
 void genStep(vector<vector<Cell>>& Plane) {
 
@@ -78,13 +78,18 @@ void genSmothStep(vector<vector<Cell>>& Plane) {
 				if ((Plane[i][j].neigh >= 0 && Plane[i][j].neigh <= 25) ||
 					(Plane[i][j].neigh >= 58 && Plane[i][j].neigh <= 121)) {
 					Plane[i][j].isAlive = false;
+					Plane[i][j].isDying = true;
 				}
 				else {
 #pragma omp atomic
 					population++;
 				}
 			}
-			else {
+			else if (Plane[i][j].isDying) {
+				Plane[i][j].isAlive = false;
+				Plane[i][j].isDying = false;
+			}
+			else{
 				if (Plane[i][j].neigh >= 34 && Plane[i][j].neigh <= 45) {
 					Plane[i][j].isAlive = true;
 #pragma omp atomic
@@ -137,12 +142,17 @@ void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	for (int y = 0; y < rows; ++y) {
 		for (int x = 0; x < cols; ++x) {
 			const Cell& cell = Plane[y][x];
-			WORD color = cell.isAlive ? 0x0B : 0x08;
+
+
+			WORD color;
+			if (cell.isAlive) color = 0x0B;  // Frost blue (#00FFFF)  
+			else if (cell.isDying) color = 0x03;  // Deep teal (#008080)  
+			else color = 0x00;  // black
 
 			int bufferPos = (info_lines + y) * bufferWidth + 2 * x;
 
 			// Komórka
-			buffer[bufferPos].Char.UnicodeChar = cell.isAlive ? L'■' : L'/';
+			buffer[bufferPos].Char.UnicodeChar = cell.isAlive ? L'■' : L'□';
 			buffer[bufferPos].Attributes = color;
 
 			// Spacjaz
@@ -234,7 +244,7 @@ int main() {
 				break;
 			}
 		}
-
+		
 		if (_kbhit()) {
 			char key = _getch();
 			if (key == 'a') {
