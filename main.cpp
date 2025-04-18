@@ -4,6 +4,7 @@
 #include <conio.h>
 #include <string>
 #include <cstdlib>
+#include <omp.h> 
 
 #include "Cell.h"
 
@@ -17,6 +18,7 @@ int population = 0;
 
 int height = 320;
 int width  = 320;
+int type   = 1;
 
 int fontSize = 1;
 
@@ -27,7 +29,7 @@ void genStep(vector<vector<Cell>>& Plane) {
 	// First, count neighbors for all cells
 	for (int i = 0; i < Plane.size(); i++) {
 		for (int j = 0; j < Plane[i].size(); j++) {
-			Plane[i][j].countNeigh(i, j, Plane);
+			Plane[i][j].countNeigh(i, j, Plane, 1);
 		}
 	}
 
@@ -57,32 +59,35 @@ void genStep(vector<vector<Cell>>& Plane) {
 }
 
 void genSmothStep(vector<vector<Cell>>& Plane) {
-
 	population = 0;
 	generation++;
-	// First, count neighbors for all cells
+
+	// Parallel neighbor counting
+#pragma omp parallel for collapse(2) schedule(dynamic, 32)
 	for (int i = 0; i < Plane.size(); i++) {
 		for (int j = 0; j < Plane[i].size(); j++) {
 			Plane[i][j].countNeigh(i, j, Plane, 5);
 		}
 	}
 
-	// Then apply the rules to all cells
+	// Parallel state update
+#pragma omp parallel for reduction(+:population) collapse(2) schedule(dynamic, 32)
 	for (int i = 0; i < Plane.size(); i++) {
 		for (int j = 0; j < Plane[i].size(); j++) {
-			// Apply Larger Game of Life rules
 			if (Plane[i][j].isAlive) {
-
-				population++;
-
-				if ((Plane[i][j].neigh >= 0 && Plane[i][j].neigh <= 25) || (Plane[i][j].neigh >= 58 && Plane[i][j].neigh <= 121)) {
+				if ((Plane[i][j].neigh >= 0 && Plane[i][j].neigh <= 25) ||
+					(Plane[i][j].neigh >= 58 && Plane[i][j].neigh <= 121)) {
 					Plane[i][j].isAlive = false;
-					population--;
+				}
+				else {
+#pragma omp atomic
+					population++;
 				}
 			}
 			else {
 				if (Plane[i][j].neigh >= 34 && Plane[i][j].neigh <= 45) {
 					Plane[i][j].isAlive = true;
+#pragma omp atomic
 					population++;
 				}
 			}
@@ -116,7 +121,7 @@ void Wypisz1(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	cout << result;
 }
 
-void Wypisz(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
+void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	if (Plane.empty() || Plane[0].empty()) return;
 
 	const int rows = Plane.size();
@@ -137,7 +142,7 @@ void Wypisz(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 			int bufferPos = (info_lines + y) * bufferWidth + 2 * x;
 
 			// Komórka
-			buffer[bufferPos].Char.UnicodeChar = cell.isAlive ? L'■' : L'□';
+			buffer[bufferPos].Char.UnicodeChar = cell.isAlive ? L'■' : L'/';
 			buffer[bufferPos].Attributes = color;
 
 			// Spacjaz
@@ -154,7 +159,7 @@ void Wypisz(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 
 	gen_text.resize(bufferWidth, L'□');
 	pop_text.resize(bufferWidth, L'□');
-	margin.resize(bufferWidth, L'□');
+	margin.resize(bufferWidth,   L'□');
 
 	for (int x = 0; x < bufferWidth; ++x) {
 		// Generacja
@@ -213,29 +218,43 @@ int main() {
 	vector<vector<Cell>> Plane(height, vector<Cell>(width));
 
 	initGosperGliderGun(Plane);
-
+	
 	srand(time(NULL));
-	
+
+	omp_set_num_threads(omp_get_max_threads());
+
 	while (true) {
-	
-		if (shouldRun) { 
-			genSmothStep(Plane);	
-			
-		};	
+
+		if (shouldRun) {
+			switch (type) {
+			case 0: genStep(Plane); break;
+			case 1: genSmothStep(Plane); break;
+			default: // Handle unexpected values
+				cerr << "Invalid simulation type!\n";
+				break;
+			}
+		}
 
 		if (_kbhit()) {
-			char key = _getch();  
+			char key = _getch();
 			if (key == 'a') {
 				shouldRun = !shouldRun;
 			}
 			if (key == 'g') {
-				initSmothGlider(rand() % height, rand() % width, Plane,0);
-			}
-		}	
+				switch (type) {
+				case 0: initGlider(rand() % height, rand() % width, Plane); break;
+				case 1: initSmothGlider(rand() % height, rand() % width, Plane, rand() % 4); break;
+				default: // Handle unexpected values
+					cerr << "Invalid simulation type!\n";
+					break;
+				}
 
-		Wypisz(Plane,hConsole);
+			}
+		}
+
+		Render(Plane, hConsole);
 
 	}
-
-	return 0;
+		return 0;
+	
 }

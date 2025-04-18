@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <omp.h> 
 using namespace std;
 
 class Cell {
@@ -12,7 +13,7 @@ public:
 
 	int neigh = 0;
 
-	void countNeigh(int x, int y, const vector<vector<Cell>>& Plane, int size=1) {
+	void countNeigh(int x, int y, const vector<vector<Cell>>& Plane, int size = 1) {
 		int result = 0;
 
 		for (int i = x - size; i <= x + size; i++) {
@@ -30,9 +31,8 @@ public:
 
 		neigh = result;
 	}
-
-
 };
+
 
 void initGosperGliderGun(vector<vector<Cell>>& Plane) {
 
@@ -144,87 +144,4 @@ void initSmothGlider(int x, int y, vector<vector<Cell>>& Plane, int direction = 
 	Plane[x + 6][y + 6].isAlive = true;
 	Plane[x][y + 6].isAlive = true;
 	Plane[x][y + 7].isAlive = true;
-}
-
-void initBug( int x, int y, vector<vector<Cell>>& Plane, int direction = 0) {
-	// Check if coordinates are valid
-	if (x < 0 || y < 0 || x + 10 >= Plane.size() || y + 10 >= Plane[0].size()) {
-		return; // Out of bounds
-	}
-
-	// Clear area first to ensure we're working with clean space
-	for (int i = x - 5; i <= x + 15; i++) {
-		for (int j = y - 5; j <= y + 15; j++) {
-			if (i >= 0 && j >= 0 && i < Plane.size() && j < Plane[0].size()) {
-				Plane[i][j].isAlive = false;
-			}
-		}
-	}
-
-	// Create a bug pattern for your specific birth/survival parameters
-	// This is a pattern inspired by the diagonal bugs in Figure 11 in the paper
-	if (direction % 4 == 0) { // Southeast diagonal bug
-		// Create "leg" segments
-		for (int i = 0; i < 5; i++) {
-			Plane[x + i][y].isAlive = true;     // Horizontal leg
-			Plane[x][y + i].isAlive = true;     // Vertical leg
-		}
-
-		// Add structural elements that help stabilize the pattern
-		Plane[x + 1][y + 1].isAlive = true;
-		Plane[x + 2][y + 2].isAlive = true;
-
-		// Remove specific cells to create asymmetry needed for movement
-		Plane[x][y].isAlive = false;
-	}
-	else if (direction % 4 == 1) { // Southwest diagonal bug
-		// Create "leg" segments
-		for (int i = 0; i < 5; i++) {
-			Plane[x + i][y].isAlive = true;     // Horizontal leg
-			Plane[x][y - i].isAlive = true;     // Vertical leg
-		}
-
-		// Add structural elements
-		Plane[x + 1][y - 1].isAlive = true;
-		Plane[x + 2][y - 2].isAlive = true;
-
-		// Remove specific cells
-		Plane[x][y].isAlive = false;
-	}
-	else if (direction % 4 == 2) { // Orthogonal (horizontal) bug
-		// Create a dense pattern
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 6; j++) {
-				Plane[x + i][y + j].isAlive = true;
-			}
-		}
-
-		// Create asymmetry for movement
-		Plane[x][y].isAlive = false;
-		Plane[x][y + 5].isAlive = false;
-		Plane[x + 2][y].isAlive = false;
-		Plane[x + 2][y + 5].isAlive = false;
-
-		// Add an extension
-		Plane[x + 3][y + 2].isAlive = true;
-		Plane[x + 3][y + 3].isAlive = true;
-	}
-	else { // Orthogonal (vertical) bug
-		// Create a dense pattern
-		for (int i = 0; i < 6; i++) {
-			for (int j = 0; j < 3; j++) {
-				Plane[x + i][y + j].isAlive = true;
-			}
-		}
-
-		// Create asymmetry for movement
-		Plane[x][y].isAlive = false;
-		Plane[x + 5][y].isAlive = false;
-		Plane[x][y + 2].isAlive = false;
-		Plane[x + 5][y + 2].isAlive = false;
-
-		// Add an extension
-		Plane[x + 2][y + 3].isAlive = true;
-		Plane[x + 3][y + 3].isAlive = true;
-	}
 }
