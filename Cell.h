@@ -34,6 +34,13 @@ public:
 	}
 };
 
+void clearPlane(vector<vector<Cell>>& Plane) {
+	for (int i = 0; i < Plane.size(); i++) {
+		for (int j = 0; j < Plane[i].size(); j++) {
+			Plane[i][j].isAlive = false;
+		}
+	}
+}
 
 void initGosperGliderGun(vector<vector<Cell>>& Plane) {
 
@@ -113,7 +120,7 @@ void initRing(int x, int y, vector<vector<Cell>>& Plane) {
 	}
 }
 
-void initSmothGlider(int x, int y, vector<vector<Cell>>& Plane, int direction = 0) {
+void initLargeGlider(int x, int y, vector<vector<Cell>>& Plane, int direction = 0) {
 	// Check if coordinates are valid
 	if (x < 0 || y < 0 || x + 10 >= Plane.size() || y + 10 >= Plane[0].size()) {
 		return; // Out of bounds

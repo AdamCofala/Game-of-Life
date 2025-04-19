@@ -17,8 +17,8 @@ int generation = 0;
 int population = 0;
 
 int height = 300;
-int width  = 300;
-int type   = 1;
+int width = 300;
+int type  = 1;
 
 unsigned int fontSize = 1;
 
@@ -26,28 +26,34 @@ void genStep(vector<vector<Cell>>& Plane) {
 
 	population = 0;
 	generation++;
-	// First, count neighbors for all cells
-	for (int i = 0; i < Plane.size(); i++) {
-		for (int j = 0; j < Plane[i].size(); j++) {
-			Plane[i][j].countNeigh(i, j, Plane, 1);
+#pragma omp parallel for collapse(2) schedule(dynamic, 32)
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			Plane[i][j].countNeigh(i, j, Plane);
 		}
 	}
 
 	// Then apply the rules to all cells
-	for (int i = 0; i < Plane.size(); i++) {
-		for (int j = 0; j < Plane[i].size(); j++) {
+#pragma omp parallel for reduction(+:population) collapse(2) schedule(dynamic, 32)
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+
+
 			// Apply Game of Life rules
 			if (Plane[i][j].isAlive) {
-				
-				population++;
-
 				if (Plane[i][j].neigh < 2 || Plane[i][j].neigh > 3) {
 					Plane[i][j].isAlive = false;
-					population--;
+				}
+				else {
+#pragma omp atomic
+					population++;
 				}
 				// Live cell with 2 or 3 neighbors lives on (no change needed)
 			}
 			else {
+
+
+
 				// Dead cell with exactly 3 neighbors becomes alive
 				if (Plane[i][j].neigh == 3) {
 					Plane[i][j].isAlive = true;
@@ -58,7 +64,7 @@ void genStep(vector<vector<Cell>>& Plane) {
 	}
 }
 
-void genSmothStep(vector<vector<Cell>>& Plane) {
+void genLargeStep(vector<vector<Cell>>& Plane) {
 	population = 0;
 	generation++;
 
@@ -75,8 +81,7 @@ void genSmothStep(vector<vector<Cell>>& Plane) {
 	for (int i = 0; i < Plane.size(); i++) {
 		for (int j = 0; j < Plane[i].size(); j++) {
 			if (Plane[i][j].isAlive) {
-				if ((Plane[i][j].neigh >= 0 && Plane[i][j].neigh <= 25) ||
-					(Plane[i][j].neigh >= 58 && Plane[i][j].neigh <= 121)) {
+				if (!(Plane[i][j].neigh>=34 && Plane[i][j].neigh<=58)) {
 					Plane[i][j].isAlive = false;
 					Plane[i][j].isDying = true;
 				}
@@ -89,7 +94,7 @@ void genSmothStep(vector<vector<Cell>>& Plane) {
 				Plane[i][j].isAlive = false;
 				Plane[i][j].isDying = false;
 			}
-			else{
+			else {
 				if (Plane[i][j].neigh >= 34 && Plane[i][j].neigh <= 45) {
 					Plane[i][j].isAlive = true;
 #pragma omp atomic
@@ -101,15 +106,15 @@ void genSmothStep(vector<vector<Cell>>& Plane) {
 }
 
 void Wypisz1(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
-	
 
-	string result="";
+
+	string result = "";
 	for (int y = 0; y < Plane.size(); y++) {
 		for (int x = 0; x < Plane[y].size(); x++) {
 
 			if (Plane[y][x].isAlive) {
 				SetConsoleTextAttribute(hConsole, 10);
-				printf("■"); 
+				printf("■");
 			}
 			else {
 				SetConsoleTextAttribute(hConsole, 8);
@@ -169,21 +174,21 @@ void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 
 	gen_text.resize(bufferWidth, L'□');
 	pop_text.resize(bufferWidth, L'□');
-	margin.resize(bufferWidth,   L'□');
+	margin.resize(bufferWidth, L'□');
 
 	for (int x = 0; x < bufferWidth; ++x) {
 		// Generacja
 
-		buffer[ 0*bufferWidth + x].Char.UnicodeChar = margin[x];
-		buffer[ 0*bufferWidth + x].Attributes = 0x0B;
-		buffer[   bufferWidth + x].Char.UnicodeChar = margin[x];
-		buffer[   bufferWidth + x].Attributes = 0x0B;
+		buffer[0 * bufferWidth + x].Char.UnicodeChar = margin[x];
+		buffer[0 * bufferWidth + x].Attributes = 0x0B;
+		buffer[bufferWidth + x].Char.UnicodeChar = margin[x];
+		buffer[bufferWidth + x].Attributes = 0x0B;
 
-		buffer[(rows) * bufferWidth + x].Char.UnicodeChar = gen_text[x];
-		buffer[(rows) * bufferWidth + x].Attributes = 0x0B;
-				
-		buffer[(rows+1) * bufferWidth + x].Char.UnicodeChar = pop_text[x];
-		buffer[(rows+1) * bufferWidth + x].Attributes = 0x0B;
+		buffer[(rows)*bufferWidth + x].Char.UnicodeChar = gen_text[x];
+		buffer[(rows)*bufferWidth + x].Attributes = 0x0B;
+
+		buffer[(rows + 1) * bufferWidth + x].Char.UnicodeChar = pop_text[x];
+		buffer[(rows + 1) * bufferWidth + x].Attributes = 0x0B;
 	}
 
 	// Konfiguracja konsoli
@@ -201,7 +206,7 @@ void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	fontInfo.cbSize = sizeof(fontInfo);
 	fontInfo.nFont = 0;
 	fontInfo.dwFontSize.X = fontSize;  // Font width
-	fontInfo.dwFontSize.Y = 2*fontSize;  // Font height
+	fontInfo.dwFontSize.Y = 2 * fontSize;  // Font height
 	fontInfo.FontFamily = FF_DONTCARE;
 	fontInfo.FontWeight = FW_NORMAL;
 
@@ -213,11 +218,11 @@ void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	COORD bufferSize = { static_cast<SHORT>(bufferWidth), static_cast<SHORT>(total_buffer_rows) };
 	SetConsoleScreenBufferSize(hConsole, bufferSize);
 
-	SMALL_RECT windowSize = {0, 0, static_cast<SHORT>(bufferWidth-1), static_cast<SHORT>(total_buffer_rows-1 )};
+	SMALL_RECT windowSize = { 0, 0, static_cast<SHORT>(bufferWidth - 1), static_cast<SHORT>(total_buffer_rows - 1) };
 	SetConsoleWindowInfo(hConsole, TRUE, &windowSize);
 
 	COORD bufferCoord = { 0, 0 };
-	SMALL_RECT writeArea = {0, 0, static_cast<SHORT>(bufferWidth - 1), static_cast<SHORT>(total_buffer_rows - 1)};
+	SMALL_RECT writeArea = { 0, 0, static_cast<SHORT>(bufferWidth - 1), static_cast<SHORT>(total_buffer_rows - 1) };
 
 	WriteConsoleOutputW(hConsole, buffer.data(), bufferSize, bufferCoord, &writeArea);
 }
@@ -228,7 +233,7 @@ int main() {
 	vector<vector<Cell>> Plane(height, vector<Cell>(width));
 
 	initGosperGliderGun(Plane);
-	
+
 	srand(time(NULL));
 
 	omp_set_num_threads(omp_get_max_threads());
@@ -238,13 +243,13 @@ int main() {
 		if (shouldRun) {
 			switch (type) {
 			case 0: genStep(Plane); break;
-			case 1: genSmothStep(Plane); break;
+			case 1: genLargeStep(Plane); break;
 			default: // Handle unexpected values
 				cerr << "Invalid simulation type!\n";
 				break;
 			}
 		}
-		
+
 		if (_kbhit()) {
 			char key = _getch();
 			if (key == 'a') {
@@ -253,18 +258,20 @@ int main() {
 			if (key == 'g') {
 				switch (type) {
 				case 0: initGlider(rand() % height, rand() % width, Plane); break;
-				case 1: initSmothGlider(rand() % height, rand() % width, Plane, rand() % 4); break;
+				case 1: initLargeGlider(rand() % height, rand() % width, Plane, rand() % 4); break;
 				default: // Handle unexpected values
 					cerr << "Invalid simulation type!\n";
 					break;
 				}
-
+			}
+			if (key == 'c') {
+				clearPlane(Plane);
 			}
 		}
 
 		Render(Plane, hConsole);
 
 	}
-		return 0;
-	
+	return 0;
+
 }
