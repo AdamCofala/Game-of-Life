@@ -120,36 +120,125 @@ void initRing(int x, int y, vector<vector<Cell>>& Plane) {
 	}
 }
 
-void initLargeGlider(int x, int y, vector<vector<Cell>>& Plane, int direction = 0) {
-	// Check if coordinates are valid
-	if (x < 0 || y < 0 || x + 10 >= Plane.size() || y + 10 >= Plane[0].size()) {
-		return; // Out of bounds
-	}
+void initLargeGlider(int x, int y, std::vector<std::vector<Cell>>& Plane, int direction = 0) {
 
-	// Clear the area
-	for (int i = x - 2; i <= x + 12; i++) {
-		for (int j = y - 2; j <= y + 12; j++) {
-			if (i >= 0 && j >= 0 && i < Plane.size() && j < Plane[0].size()) {
-				Plane[i][j].isAlive = false;
-			}
-		}
-	}
+    // --- Define the base pattern relative coordinates (dx, dy) ---
+    // Based on the 11x10 grid provided previously.
+    const std::vector<std::pair<int, int>> basePattern = {
+        // Row 0
+        {4, 0}, {5, 0}, {6, 0},
+        // Row 1
+        {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}, {7, 1},
+        // Row 2
+        {0, 2}, {1, 2}, {2, 2}, {3, 2}, {4, 2}, {5, 2}, {8, 2},
+        // Row 3
+        {0, 3}, {1, 3}, {2, 3}, {3, 3}, {4, 3}, {9, 3},
+        // Row 4
+        {0, 4}, {1, 4}, {2, 4}, {3, 4}, {9, 4},
+        // Row 5
+        {0, 5}, {1, 5}, {2, 5}, {3, 5}, {8, 5}, {9, 5},
+        // Row 6
+        {0, 6}, {1, 6}, {2, 6}, {3, 6}, {4, 6}, {6, 6}, {7, 6}, {8, 6}, {9, 6},
+        // Row 7
+        {1, 7}, {2, 7}, {3, 7}, {4, 7}, {5, 7}, {6, 7}, {7, 7}, {8, 7},
+        // Row 8
+        {2, 8}, {3, 8}, {4, 8}, {5, 8}, {6, 8}, {7, 8},
+        // Row 9
+        {3, 9}, {4, 9}, {5, 9}, {6, 9},
+        // Row 10
+        {4, 10}, {5, 10}, {6, 10}
+    };
 
-	// Pattern designed to create approximately 34-45 neighbors for birth
-	// and maintain cells with 34-57 neighbors for survival
+    const int baseWidth = 10;  // Width of the bounding box for the base pattern
+    const int baseHeight = 11; // Height of the bounding box for the base pattern
 
-	// Create a densely populated square
-	for (int i = 0; i < 6; i++) {
-		for (int j = 0; j < 6; j++) {
-			Plane[x + i][y + j].isAlive = true;
-		}
-	}
+    // --- Normalize direction and calculate rotated dimensions ---
+    // Ensures direction is 0, 1, 2, or 3. Handles negative inputs.
+    int normalizedDirection = ((direction % 4) + 4) % 4;
 
-	// Add asymmetric elements that might lead to movement
-	Plane[x + 6][y].isAlive = true;
-	Plane[x + 7][y].isAlive = true;
-	Plane[x + 8][y + 1].isAlive = true;
-	Plane[x + 6][y + 6].isAlive = true;
-	Plane[x][y + 6].isAlive = true;
-	Plane[x][y + 7].isAlive = true;
+    int rotatedWidth, rotatedHeight;
+    if (normalizedDirection == 0 || normalizedDirection == 2) { // 0 or 180 deg
+        rotatedWidth = baseWidth;
+        rotatedHeight = baseHeight;
+    }
+    else { // 90 or 270 deg
+        rotatedWidth = baseHeight; // Dimensions swap
+        rotatedHeight = baseWidth;
+    }
+
+    // --- Check if rotated pattern fits within bounds ---
+    if (x < 0 || y < 0 || x + rotatedWidth > Plane.size() || y + rotatedHeight > Plane[0].size()) {
+        // It might be useful to print the calculated rotated dimensions here for debugging
+        std::cerr << "Error: Rotated pattern (width=" << rotatedWidth << ", height=" << rotatedHeight
+            << " at " << x << "," << y << ") placement out of bounds." << std::endl;
+        return;
+    }
+
+    // --- Clear the area for the rotated pattern ---
+    // Use rotated dimensions for clearing area calculation
+    int clearStartX = max(0, x - 2);
+    int clearStartY = max(0, y - 2);
+    // Use min with plane dimensions to avoid going out of bounds
+    int clearEndX = min((int)Plane.size(), x + rotatedWidth + 2);
+    int clearEndY = min((int)Plane[0].size(), y + rotatedHeight + 2);
+
+    for (int i = clearStartX; i < clearEndX; ++i) {
+        // Check row validity
+        if (i >= 0 && i < Plane.size()) {
+            for (int j = clearStartY; j < clearEndY; ++j) {
+                // Check column validity for this specific row
+                if (j >= 0 && j < Plane[i].size()) {
+                    Plane[i][j].isAlive = false;
+                }
+            }
+        }
+    }
+
+    // --- Apply the pattern with rotation ---
+    for (const auto& p : basePattern) {
+        int dx_base = p.first;
+        int dy_base = p.second;
+        int dx_rotated, dy_rotated;
+
+        // Calculate rotated offsets based on the normalized direction
+        switch (normalizedDirection) {
+        case 0: // 0 degrees (no rotation)
+            dx_rotated = dx_base;
+            dy_rotated = dy_base;
+            break;
+        case 1: // 90 degrees clockwise: (dx, dy) -> (dy, W-1-dx)
+            dx_rotated = dy_base;
+            dy_rotated = (baseWidth - 1) - dx_base;
+            break;
+        case 2: // 180 degrees: (dx, dy) -> (W-1-dx, H-1-dy)
+            dx_rotated = (baseWidth - 1) - dx_base;
+            dy_rotated = (baseHeight - 1) - dy_base;
+            break;
+        case 3: // 270 degrees clockwise: (dx, dy) -> (H-1-dy, dx)
+            dx_rotated = (baseHeight - 1) - dy_base;
+            dy_rotated = dx_base;
+            break;
+        default: // Should not happen due to normalization
+            dx_rotated = dx_base;
+            dy_rotated = dy_base;
+            break;
+        }
+
+        // Calculate final absolute coordinates on the Plane
+        int finalX = x + dx_rotated;
+        int finalY = y + dy_rotated;
+
+        // Final check before writing (mostly redundant if initial check is correct, but safe)
+        if (finalX >= 0 && finalX < Plane.size() && finalY >= 0 && finalY < Plane[0].size()) {
+            // Check specific row size for safety with potentially jagged vectors
+            if (finalY < Plane[finalX].size()) {
+                Plane[finalX][finalY].isAlive = true;
+            }
+        }
+        else {
+            // This case should ideally not be reached if the initial boundary check is correct.
+            // Could indicate an issue with rotation logic or plane dimensions.
+            std::cerr << "Warning: Calculated rotated coordinate (" << finalX << "," << finalY << ") is out of bounds unexpectedly." << std::endl;
+        }
+    }
 }

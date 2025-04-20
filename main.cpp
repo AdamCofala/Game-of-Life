@@ -233,6 +233,7 @@ int main() {
 	vector<vector<Cell>> Plane(height, vector<Cell>(width));
 
 	initGosperGliderGun(Plane);
+	
 
 	srand(time(NULL));
 
