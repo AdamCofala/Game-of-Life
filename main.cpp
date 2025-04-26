@@ -5,27 +5,39 @@
 #include <string>
 #include <cstdlib>
 #include <omp.h> 
+#include <fstream>
+#include <cassert>
 
 #include "Cell.h"
+#include "fileIO.h"
 
 using namespace std;
 
 HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
+fileIO fIO;
+
 bool shouldRun = true;
+bool shouldClose = false;
+bool shouldSave = false;
 int generation = 0;
 int population = 0;
 
 int height = 300;
-int width = 300;
+int width =  300;
 int type  = 1;
 
 unsigned int fontSize = 1;
+
+vector<vector<Cell>> Plane(height, vector<Cell>(width));
+
+void processKeyInput(vector<vector<Cell>>& Plane);
 
 void genStep(vector<vector<Cell>>& Plane) {
 
 	population = 0;
 	generation++;
+
 #pragma omp parallel for collapse(2) schedule(dynamic, 32)
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
@@ -228,20 +240,60 @@ void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 }
 
 
+void chooseType() {
+
+	system("cls");
+
+	cout << "1. Classic Game of Life" << endl;
+	cout << "2. Larger than Life" << endl;
+
+	char key;
+	cin >> key;	
+
+	switch (key - '0') {
+	case 1: type=0; break;
+	case 2: type=1; break;
+	default: 	MessageBoxA(nullptr, "Wrong input type! ", "Key Input Error", MB_ICONERROR | MB_OK); chooseType();
+	}
+	
+}
+
+void intypeMenu(){
+
+	system("cls");
+
+	cout << "1. Run new simulation" << endl;
+	cout << "2. Save simulation to file" << endl;
+	cout << "3. Import simulation from file" << endl;
+
+	char key;
+	cin >> key;
+
+	switch (key-'0') {
+	case 1:  return; break;
+	case 2:  shouldSave = true; fIO.dialogOutput(); break;
+	case 3:  fIO.dialogInput(); fIO.fileInput(Plane); break;
+	default: MessageBoxA(nullptr, "Wrong input menu option! ", "Key Input Error", MB_ICONERROR | MB_OK); intypeMenu();
+	}
+
+}
+
 int main() {
 
-	vector<vector<Cell>> Plane(height, vector<Cell>(width));
 
-	initGosperGliderGun(Plane);
-	
+	initGosperGliderGun(Plane);	
 
 	srand(time(NULL));
 
 	omp_set_num_threads(omp_get_max_threads());
 
-	while (true) {
+	chooseType();
+	intypeMenu();
+
+	while (!shouldClose) {
 
 		if (shouldRun) {
+
 			switch (type) {
 			case 0: genStep(Plane); break;
 			case 1: genLargeStep(Plane); break;
@@ -249,30 +301,46 @@ int main() {
 				cerr << "Invalid simulation type!\n";
 				break;
 			}
+
 		}
 
-		if (_kbhit()) {
-			char key = _getch();
-			if (key == 'a') {
-				shouldRun = !shouldRun;
-			}
-			if (key == 'g') {
-				switch (type) {
-				case 0: initGlider(rand() % height, rand() % width, Plane); break;
-				case 1: initLargeGlider(rand() % height, rand() % width, Plane, rand() % 4); break;
-				default: // Handle unexpected values
-					cerr << "Invalid simulation type!\n";
-					break;
-				}
-			}
-			if (key == 'c') {
-				clearPlane(Plane);
-			}
-		}
+		processKeyInput(Plane);
 
 		Render(Plane, hConsole);
+		
 
 	}
+
+	exit(0);
+
 	return 0;
+
+}
+
+void processKeyInput(vector<vector<Cell>> &Plane) {
+
+	if (_kbhit()) {
+		char key = _getch();
+		if (key == 'a') {
+			shouldRun = !shouldRun;
+
+			if(shouldSave) fIO.fileOutput(Plane);
+		}
+		if (key == 'g') {
+			switch (type) {
+			case 0: initGlider(rand() % height, rand() % width, Plane); break;
+			case 1: initLargeGlider(rand() % height, rand() % width, Plane, rand() % 4); break;
+			default: // Handle unexpected values
+				cerr << "Invalid simulation type!\n";
+				break;
+			}
+		}
+		if (key == 'c') {
+			clearPlane(Plane);
+		}
+		if (key == 'e') {
+			shouldClose=true;
+		}
+	}
 
 }
