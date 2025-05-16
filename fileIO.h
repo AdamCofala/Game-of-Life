@@ -10,31 +10,30 @@ using namespace std;
 class fileIO {
 
 
-	string output = "";
-	string input = "";
+	string output = "output.txt";
+	string input =  "input.txt";
 
 public:
 
 	void dialogOutput() {
-
 		system("cls");
-
-		cout << "For what name it should be save? : ";
-		string filename;
-		cin >> filename;
-
-		output = filename + ".txt";
+		cout << "+-------------------------+" << endl;
+		cout << "|  ZAPIS SYMULACJI        |" << endl;
+		cout << "+-------------------------+" << endl;
+		cout << "Podaj nazwe pliku: ";
+		cin >> output;
+		output += ".txt";
 	}
 
 	void dialogInput() {
 
 		system("cls");
-
-		cout << "Give me a name? : ";
-		string filename;
-		cin >> filename;
-
-		input = filename + ".txt";
+		cout << "+-------------------------+" << endl;
+		cout << "| WCZYTAJ SYMULACJE       |" << endl;
+		cout << "+-------------------------+" << endl;
+		cout << "Podaj nazwe pliku: ";
+		cin >> input;
+		input += ".txt";
 	}
 
 	void fileInput(vector<vector<Cell>> &Plane) {
@@ -60,8 +59,6 @@ public:
 			Plane.push_back(row);
 		}
 	}
-
-
 
 	void fileOutput(const vector<vector<Cell>>&Plane) {
 

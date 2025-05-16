@@ -6,9 +6,6 @@ using namespace std;
 class Cell {
 public:
 
-	int posX;
-	int poxY;
-
 	bool isAlive = 0;
 	bool isDying = 0;
 
@@ -101,8 +98,8 @@ void initGlider(int x, int y, vector<vector<Cell>>& Plane) {
 }
 
 void initRing(int x, int y, vector<vector<Cell>>& Plane) {
-	int sizeX = Plane.size();
-	int sizeY = Plane[0].size();
+	const size_t sizeX = Plane.size();
+	const size_t sizeY = Plane[0].size();
 
 	int ringCenterX = x;
 	int ringCenterY = y;

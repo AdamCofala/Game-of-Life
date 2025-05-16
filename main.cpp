@@ -7,6 +7,7 @@
 #include <omp.h> 
 #include <fstream>
 #include <cassert>
+#include <random>
 
 #include "Cell.h"
 #include "fileIO.h"
@@ -26,6 +27,11 @@ int population = 0;
 int height = 300;
 int width =  300;
 int type  = 1;
+
+random_device seed;
+mt19937 gen(seed());
+uniform_int_distribution<int> randX(0, height);
+uniform_int_distribution<int> randY(0, width);
 
 unsigned int fontSize = 1;
 
@@ -117,40 +123,14 @@ void genLargeStep(vector<vector<Cell>>& Plane) {
 	}
 }
 
-void Wypisz1(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
-
-
-	string result = "";
-	for (int y = 0; y < Plane.size(); y++) {
-		for (int x = 0; x < Plane[y].size(); x++) {
-
-			if (Plane[y][x].isAlive) {
-				SetConsoleTextAttribute(hConsole, 10);
-				printf("■");
-			}
-			else {
-				SetConsoleTextAttribute(hConsole, 8);
-				printf("□");
-			}
-
-			cout << " ";
-			//Plane[y][x].isAlive ? result+="■" : result+="□";
-			//result += " ";
-		}
-		//result += "\n";
-		printf("\n");
-	}
-	cout << result;
-}
-
 void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 	if (Plane.empty() || Plane[0].empty()) return;
 
-	const int rows = Plane.size();
-	const int cols = Plane[0].size();
+	const size_t rows = Plane.size();
+	const size_t cols = Plane[0].size();
 	const int info_lines = 2; // Dodatkowe linie na informacje
-	const int bufferWidth = 2 * cols;
-	const int total_buffer_rows = info_lines + rows;
+	const size_t bufferWidth = 2 * cols;
+	const size_t total_buffer_rows = info_lines + rows;
 
 	vector<CHAR_INFO> buffer(total_buffer_rows * bufferWidth);
 
@@ -166,7 +146,7 @@ void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 			else if (cell.isDying) color = 0x03;  // Deep teal (#008080)  
 			else color = 0x00;  // black
 
-			int bufferPos = (info_lines + y) * bufferWidth + 2 * x;
+			size_t bufferPos = (info_lines + y) * bufferWidth + 2 * x;
 
 			// Komórka
 			buffer[bufferPos].Char.UnicodeChar = cell.isAlive ? L'■' : L'□';
@@ -240,6 +220,7 @@ void Render(const vector<vector<Cell>>& Plane, HANDLE& hConsole) {
 }
 
 
+
 void chooseType() {
 
 	system("cls");
@@ -262,9 +243,14 @@ void intypeMenu(){
 
 	system("cls");
 
-	cout << "1. Run new simulation" << endl;
-	cout << "2. Save simulation to file" << endl;
-	cout << "3. Import simulation from file" << endl;
+	cout << "+----------------------------+" << endl;
+	cout << "|           MENU             |" << endl;
+	cout << "+----------------------------+" << endl;
+	cout << "| 1. Run new simulation      |" << endl;
+	cout << "| 2. Save to file            |" << endl;
+	cout << "| 3. Import from file        |" << endl;
+	cout << "+----------------------------+" << endl;
+	cout << "Chosee option (1-3): ";
 
 	char key;
 	cin >> key;
@@ -282,8 +268,6 @@ int main() {
 
 
 	initGosperGliderGun(Plane);	
-
-	srand(time(NULL));
 
 	omp_set_num_threads(omp_get_max_threads());
 
@@ -305,12 +289,9 @@ int main() {
 		}
 
 		processKeyInput(Plane);
-
 		Render(Plane, hConsole);
 		
-
 	}
-
 	exit(0);
 
 	return 0;
@@ -328,8 +309,8 @@ void processKeyInput(vector<vector<Cell>> &Plane) {
 		}
 		if (key == 'g') {
 			switch (type) {
-			case 0: initGlider(rand() % height, rand() % width, Plane); break;
-			case 1: initLargeGlider(rand() % height, rand() % width, Plane, rand() % 4); break;
+			case 0: initGlider(randX(gen), randY(gen), Plane); break;
+			case 1: initLargeGlider(randX(gen), randY(gen), Plane, randX(gen)%4); break;
 			default: // Handle unexpected values
 				cerr << "Invalid simulation type!\n";
 				break;
